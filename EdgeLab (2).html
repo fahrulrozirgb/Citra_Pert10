@@ -1,0 +1,981 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>EdgeLab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: satu halaman berisi empat "scene" (Beranda, Studio, Bandingkan, Teori).
+   Kartu demo di Beranda berpindah bentuk (morph) menjadi kanvas Studio saat transisi. */
+:root {
+  --ink: #0c0d11;
+  --ink-2: #13151b;
+  --ink-3: #1b1e26;
+  --line: #2b2f3a;
+  --line-soft: #20232c;
+  --text: #ebe7dd;
+  --muted: #9a968c;
+  --dim: #6f6c64;
+  --gold: #c9a55c;
+  --gold-hi: #e8cf94;
+  --gold-lo: #8d7340;
+  --cool: #8fa6c9;
+  --font-display: 'Cormorant Garamond', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--ink); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  background: var(--ink); z-index: 30;
+}
+:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p, dl, dd, ol, ul, figure { margin: 0; padding: 0; }
+.wrap {
+  max-width: 1240px; margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--gold);
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; letter-spacing: -.01em; }
+h1 { font-size: clamp(2.7rem, 6.6vw, 5.4rem); line-height: .98; }
+h2 { font-size: clamp(2rem, 4vw, 3.1rem); line-height: 1.05; }
+h3 { font-size: 1.7rem; line-height: 1.1; }
+em { font-style: italic; color: var(--gold-hi); }
+.mono { font-family: var(--font-mono); }
+
+/* Header */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: rgba(12, 13, 17, .78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-soft);
+  view-transition-name: nav;
+}
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 62px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 1.55rem; font-weight: 600; letter-spacing: .01em; flex: none; }
+.brand .mark { width: 28px; height: 28px; color: var(--text); }
+.nav { position: relative; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; padding-bottom: 6px; margin-bottom: -6px; }
+.nav::-webkit-scrollbar { display: none; }
+.nav a { position: relative; padding: 8px 14px; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--muted); white-space: nowrap; transition: color .3s; }
+.nav a:hover, .nav a[aria-current] { color: var(--text); }
+.nav-ink { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--gold); transition: transform .55s cubic-bezier(.7, 0, .2, 1), width .55s cubic-bezier(.7, 0, .2, 1), opacity .3s; box-shadow: 0 0 10px rgba(201, 165, 92, .6); }
+
+/* Views */
+.view { padding-block: clamp(28px, 5vw, 64px) clamp(40px, 6vw, 80px); }
+.view-head { display: grid; gap: 10px; margin-bottom: clamp(22px, 3vw, 36px); }
+.view-head p.sub { color: var(--muted); max-width: 62ch; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 6px; font: 600 13.5px/1 var(--font-body); letter-spacing: .03em; border: 1px solid transparent; cursor: pointer; transition: background .25s, border-color .25s, color .25s, transform .25s; }
+.btn-gold { background: var(--gold); color: #17130a; }
+.btn-gold:hover { background: var(--gold-hi); transform: translateY(-1px); }
+.btn-ghost { border-color: var(--line); color: var(--text); background: transparent; }
+.btn-ghost:hover { border-color: var(--gold-lo); color: var(--gold-hi); }
+.btn-sm { padding: 10px 14px; font-size: 12.5px; }
+
+/* Home */
+.view-home { position: relative; isolation: isolate; overflow: hidden; }
+.glow { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(620px circle at var(--mx, 70%) var(--my, 30%), rgba(201, 165, 92, .11), transparent 62%); }
+.hero { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 76px); align-items: center; }
+.hero-copy { display: grid; gap: 24px; justify-items: start; }
+.lede { color: var(--muted); font-size: 1.05rem; max-width: 52ch; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.facts { display: grid; grid-template-columns: repeat(3, auto); gap: 12px 34px; padding-top: 22px; border-top: 1px solid var(--line-soft); width: 100%; justify-content: start; }
+.facts dt { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.facts dd { font-size: 13.5px; color: var(--text); margin-top: 2px; }
+.demo { position: relative; aspect-ratio: 800 / 520; width: 100%; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--ink-2); view-transition-name: stage; box-shadow: 0 50px 90px -40px rgba(0, 0, 0, .85), 0 0 0 1px rgba(201, 165, 92, .07); }
+.demo canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.demo .edge { animation: sweepClip 10s cubic-bezier(.65, 0, .35, 1) infinite; }
+.demo .line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--gold-hi); box-shadow: 0 0 14px rgba(232, 207, 148, .65); animation: sweepLine 10s cubic-bezier(.65, 0, .35, 1) infinite; }
+.demo .line::after { content: "↔"; position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); border: 1px solid var(--gold); color: var(--gold-hi); font-size: 13px; }
+@keyframes sweepClip { 0%, 100% { clip-path: inset(0 0 0 12%); } 50% { clip-path: inset(0 0 0 88%); } }
+@keyframes sweepLine { 0%, 100% { left: 12%; } 50% { left: 88%; } }
+.chip { position: absolute; top: 12px; z-index: 2; padding: 4px 9px; border-radius: 4px; background: rgba(12, 13, 17, .72); border: 1px solid var(--line); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text); pointer-events: none; backdrop-filter: blur(6px); }
+.chip-l { left: 12px; }
+.chip-r { right: 12px; color: var(--gold-hi); }
+.teasers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: clamp(44px, 7vw, 92px); border-top: 1px solid var(--line-soft); }
+.teaser { display: grid; gap: 8px; padding: 26px 26px 26px 0; position: relative; transition: background .3s; }
+.teaser + .teaser { padding-left: 26px; border-left: 1px solid var(--line-soft); }
+.teaser::before { content: ""; position: absolute; left: 0; top: -1px; height: 1px; width: 0; background: var(--gold); transition: width .5s cubic-bezier(.7, 0, .2, 1); }
+.teaser:hover::before { width: 100%; }
+.teaser h3 { font-size: 1.5rem; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.teaser h3 span { color: var(--gold); font-family: var(--font-body); font-size: 1rem; transition: transform .3s; }
+.teaser:hover h3 span { transform: translateX(5px); }
+.teaser p { color: var(--muted); font-size: 14px; }
+
+/* Studio */
+.studio { display: grid; grid-template-columns: 330px minmax(0, 1fr); grid-template-areas: "panel stage" "panel aux"; grid-template-rows: auto 1fr; gap: 18px 28px; align-items: start; }
+.stage-wrap { grid-area: stage; background: var(--ink-2); border: 1px solid var(--line-soft); border-radius: 8px; padding: 14px; position: relative; }
+.aux { grid-area: aux; }
+.stage { --ratio: 1.538; --pos: 50%; position: relative; width: 100%; max-width: calc(68vh * var(--ratio)); aspect-ratio: var(--ratio); margin-inline: auto; border-radius: 4px; overflow: hidden; background: #000; view-transition-name: stage; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage #cvEdge { clip-path: inset(0 0 0 var(--pos)); }
+.stage-line { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 1px; background: var(--gold-hi); box-shadow: 0 0 14px rgba(232, 207, 148, .65); pointer-events: none; }
+.stage-line::after { content: "↔"; position: absolute; top: 50%; left: 50%; width: 32px; height: 32px; margin: -16px 0 0 -16px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); border: 1px solid var(--gold); color: var(--gold-hi); font-size: 14px; }
+.stage:focus-within { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.stage input#cmp { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; touch-action: pan-y; -webkit-appearance: none; appearance: none; background: transparent; }
+.stage input#cmp::-webkit-slider-runnable-track { height: 100%; background: transparent; }
+.stage input#cmp::-webkit-slider-thumb { -webkit-appearance: none; width: 2px; height: 100%; background: transparent; }
+.stage input#cmp::-moz-range-thumb { width: 2px; height: 100%; border: 0; background: transparent; }
+.drop-msg { position: absolute; inset: 0; z-index: 3; display: none; place-items: center; background: rgba(12, 13, 17, .82); font-family: var(--font-display); font-size: 1.8rem; font-style: italic; color: var(--gold-hi); border: 1px dashed var(--gold); pointer-events: none; }
+.stage-wrap.dragging .drop-msg { display: grid; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stats div { padding: 4px 4px 0; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.stats dt { font-family: var(--font-mono); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--dim); }
+.stats dd { font-family: var(--font-mono); font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.panel { grid-area: panel; background: var(--ink-2); border: 1px solid var(--line-soft); border-radius: 8px; padding: 6px 20px 20px; display: grid; }
+.group { display: grid; gap: 12px; padding-block: 18px; border-bottom: 1px solid var(--line-soft); }
+.group:last-child { border-bottom: 0; padding-bottom: 0; }
+.group > .lbl { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button { padding: 8px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: 600 12.5px/1.2 var(--font-body); cursor: pointer; transition: background .25s, color .25s, box-shadow .25s; }
+.seg button:hover { color: var(--text); }
+.seg button[aria-pressed="true"] { background: var(--ink-3); color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(201, 165, 92, .38); }
+.src-name { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.row { display: grid; gap: 8px; }
+.row-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; color: var(--text); }
+.row-h output { font-family: var(--font-mono); font-size: 12px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.panel input[type=range], .cmp-ctl input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; margin: 0; }
+.panel input[type=range]::-webkit-slider-runnable-track, .cmp-ctl input[type=range]::-webkit-slider-runnable-track { height: 2px; background: var(--line); }
+.panel input[type=range]::-moz-range-track, .cmp-ctl input[type=range]::-moz-range-track { height: 2px; background: var(--line); }
+.panel input[type=range]::-webkit-slider-thumb, .cmp-ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -7px; border-radius: 50%; background: var(--gold); border: 3px solid var(--ink-2); box-shadow: 0 0 0 1px var(--gold-lo); }
+.panel input[type=range]::-moz-range-thumb, .cmp-ctl input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--gold); border: 3px solid var(--ink-2); box-shadow: 0 0 0 1px var(--gold-lo); }
+.switch { display: flex; gap: 12px; align-items: center; justify-content: space-between; cursor: pointer; font-size: 13px; }
+.switch input { -webkit-appearance: none; appearance: none; width: 38px; height: 22px; border-radius: 99px; background: var(--ink-3); border: 1px solid var(--line); position: relative; cursor: pointer; transition: background .25s, border-color .25s; flex: none; margin: 0; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .25s, background .25s; }
+.switch input:checked { background: rgba(201, 165, 92, .18); border-color: var(--gold-lo); }
+.switch input:checked::after { transform: translateX(16px); background: var(--gold-hi); }
+.kpair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.kcell { display: grid; gap: 6px; justify-items: start; }
+.kcell small { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); letter-spacing: .1em; }
+.kern { --n: 3; display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 3px; width: 100%; font-family: var(--font-mono); font-size: 12.5px; }
+.kern span { display: grid; place-items: center; aspect-ratio: 1.15; background: var(--ink-3); border: 1px solid var(--line-soft); border-radius: 4px; font-variant-numeric: tabular-nums; }
+.kern .pos { color: var(--gold-hi); }
+.kern .neg { color: var(--cool); }
+.kern .zero { color: var(--dim); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Bandingkan */
+.cmp-ctl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; align-items: end; padding: 18px 20px; background: var(--ink-2); border: 1px solid var(--line-soft); border-radius: 8px; margin-bottom: 24px; }
+.cmp-ctl .row { align-content: end; }
+.cmp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.cmp-card { display: grid; gap: 12px; align-content: start; }
+.cmp-frame { border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: #000; transition: border-color .3s, transform .5s cubic-bezier(.2, .8, .2, 1); }
+.cmp-card:hover .cmp-frame { border-color: var(--gold-lo); transform: translateY(-3px); }
+.cmp-frame canvas { display: block; width: 100%; height: auto; }
+.cmp-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.cmp-title h3 { font-size: 1.7rem; }
+.tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--gold-lo); color: var(--gold-hi); }
+.tag[hidden] { display: none; }
+.cmp-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cmp-meta dt { font-family: var(--font-mono); font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--dim); }
+.cmp-meta dd { font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.note { color: var(--muted); font-size: 13.5px; margin-top: 22px; max-width: 72ch; }
+
+/* Teori */
+.sec { display: grid; gap: 22px; padding-block: clamp(26px, 4vw, 44px); border-top: 1px solid var(--line-soft); }
+.sec:first-of-type { border-top: 0; padding-top: 0; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; padding: 4px 22px 4px 0; display: grid; gap: 8px; align-content: start; position: relative; }
+.steps li + li { padding-left: 22px; border-left: 1px solid var(--line-soft); }
+.steps li::before { content: counter(s); font-family: var(--font-display); font-size: 2.6rem; line-height: 1; color: var(--gold); }
+.steps strong { font-weight: 600; }
+.steps p { color: var(--muted); font-size: 14px; }
+.code { font-family: var(--font-mono); font-size: 12.5px; color: var(--gold-hi); background: var(--ink-2); border: 1px solid var(--line-soft); border-radius: 4px; padding: 8px 10px; overflow-x: auto; white-space: nowrap; }
+.methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.method { display: grid; gap: 14px; align-content: start; }
+.method p { color: var(--muted); font-size: 14.5px; }
+.method .kpair { max-width: 300px; }
+.formulas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; }
+.formulas div { display: grid; gap: 6px; }
+.formulas small { color: var(--muted); font-size: 13px; }
+.calc { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 30px; align-items: start; }
+.patch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.patch input { width: 100%; padding: 12px 4px; text-align: center; background: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; color: var(--text); font: 500 16px var(--font-mono); font-variant-numeric: tabular-nums; transition: opacity .25s, border-color .25s; -moz-appearance: textfield; }
+.patch input::-webkit-outer-spin-button, .patch input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.patch input:focus { border-color: var(--gold); }
+.patch input.off { opacity: .28; }
+.calc-out { display: grid; gap: 16px; }
+.res { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.res div { border-top: 1px solid var(--line); padding-top: 8px; }
+.res dt { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--dim); }
+.res dd { font-family: var(--font-mono); font-size: 1.35rem; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.expr { font-family: var(--font-mono); font-size: 12px; color: var(--muted); line-height: 1.9; overflow-wrap: anywhere; }
+.tbl-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
+th, td { text-align: left; padding: 12px 14px 12px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 500; }
+td:first-child { font-family: var(--font-display); font-size: 1.35rem; }
+td { color: var(--muted); }
+td:first-child { color: var(--text); }
+.list { display: grid; gap: 6px; color: var(--muted); font-size: 14px; list-style: none; }
+.list li { padding-left: 16px; position: relative; }
+.list li::before { content: ""; position: absolute; left: 0; top: .7em; width: 7px; height: 1px; background: var(--gold); }
+.foot { border-top: 1px solid var(--line-soft); padding-block: 26px calc(30px + env(safe-area-inset-bottom, 0px)); color: var(--dim); font-size: 12.5px; }
+.foot .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* Overlay + toast */
+.lb { position: fixed; inset: 0; z-index: 50; display: none; place-items: center; padding: 24px; background: rgba(6, 7, 9, .92); backdrop-filter: blur(8px); }
+.lb.on { display: grid; }
+.lb-box { display: grid; gap: 14px; justify-items: center; max-width: 100%; max-height: 100%; }
+.lb img { max-width: 100%; max-height: 78vh; border-radius: 4px; border: 1px solid var(--line); background: #000; }
+.lb p { color: var(--muted); font-size: 13px; text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); z-index: 60; max-width: min(92vw, 520px); padding: 12px 18px; border-radius: 8px; background: var(--ink-3); border: 1px solid var(--gold-lo); color: var(--text); font-size: 13.5px; opacity: 0; pointer-events: none; transition: opacity .35s, transform .35s; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Intro motion (hanya saat pertama dimuat) */
+body.intro .rise { animation: rise .9s cubic-bezier(.16, 1, .3, 1) both; animation-delay: var(--d, 0ms); }
+@keyframes rise { from { transform: translateY(18px); filter: blur(6px); } }
+
+/* Transisi antar-scene ala Morph */
+::view-transition-group(root) { animation-duration: .7s; }
+::view-transition-old(root) { animation: vtOut .45s cubic-bezier(.4, 0, .6, 1) both; mix-blend-mode: normal; }
+::view-transition-new(root) { animation: vtIn .75s cubic-bezier(.16, 1, .3, 1) both; mix-blend-mode: normal; }
+@keyframes vtOut { to { opacity: 0; transform: scale(.965); filter: blur(10px); } }
+@keyframes vtIn { from { opacity: 0; transform: translateY(26px) scale(1.02); filter: blur(10px); } }
+::view-transition-group(stage) { animation-duration: .85s; animation-timing-function: cubic-bezier(.76, 0, .24, 1); }
+::view-transition-old(stage), ::view-transition-new(stage) { mix-blend-mode: normal; }
+
+@media (max-width: 1000px) {
+  .hero { grid-template-columns: 1fr; }
+  .studio { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+  .stage-wrap { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 63px); z-index: 6; background: var(--ink); border-width: 0 0 1px; border-radius: 0; padding: 8px 0 10px; }
+  .stage { max-width: calc(34vh * var(--ratio)); }
+  .cmp-ctl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmp-grid, .methods { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 26px; }
+  .steps li:nth-child(3) { padding-left: 0; border-left: 0; }
+  .calc { grid-template-columns: 1fr; }
+  .teasers { grid-template-columns: 1fr; }
+  .teaser + .teaser { padding-left: 0; border-left: 0; border-top: 1px solid var(--line-soft); }
+}
+@media (max-width: 560px) {
+  .facts { grid-template-columns: 1fr 1fr; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .formulas { grid-template-columns: 1fr; }
+  .res { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmp-ctl { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .steps li + li { padding-left: 0; border-left: 0; }
+  .brand span { display: none; }
+  .nav a { padding: 8px 10px; }
+  .view-head { gap: 8px; }
+  .kern span { aspect-ratio: 1.7; }
+}
+@media (pointer: coarse) {
+  .seg button { padding: 12px 6px; }
+  .btn-sm { padding: 14px 14px; }
+  .panel input[type=range], .cmp-ctl input[type=range] { height: 32px; }
+  .panel input[type=range]::-webkit-slider-thumb, .cmp-ctl input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -11px; }
+  .panel input[type=range]::-moz-range-thumb, .cmp-ctl input[type=range]::-moz-range-thumb { width: 18px; height: 18px; }
+  .switch input { width: 46px; height: 26px; }
+  .switch input::after { width: 20px; height: 20px; }
+  .switch input:checked::after { transform: translateX(20px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.intro .rise { animation: none; }
+  .demo .edge { animation: none; clip-path: inset(0 0 0 50%); }
+  .demo .line { animation: none; left: 50%; }
+  .nav-ink, .btn, .cmp-frame, .toast { transition: none; }
+}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#beranda" aria-label="EdgeLab, ke Beranda">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4 23 L28 9" fill="none" stroke="#c9a55c" stroke-width="1.6"/><circle cx="16" cy="16" r="2.2" fill="#c9a55c"/></svg>
+      <span>EdgeLab</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Navigasi utama">
+      <a href="#beranda" data-go="beranda">Beranda</a>
+      <a href="#studio" data-go="studio">Studio</a>
+      <a href="#bandingkan" data-go="bandingkan">Bandingkan</a>
+      <a href="#teori" data-go="teori">Teori</a>
+      <i class="nav-ink" id="navInk"></i>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- BERANDA -->
+  <section class="view view-home" id="view-beranda" data-view="beranda">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow rise" style="--d:0ms">Pengolahan Citra Digital · Modul 10</p>
+          <h1 class="rise" style="--d:90ms">Garis halus di antara <em>terang</em> dan <em>gelap</em>.</h1>
+          <p class="lede rise" style="--d:180ms">EdgeLab menghitung gradien setiap piksel dengan operator Sobel, Prewitt, dan Roberts. Unggah gambar, atur ambang, lalu lihat tepinya muncul langsung di browser.</p>
+          <div class="cta rise" style="--d:270ms">
+            <a class="btn btn-gold" href="#studio">Buka Studio</a>
+            <a class="btn btn-ghost" href="#teori">Pelajari teorinya</a>
+          </div>
+          <dl class="facts rise" style="--d:360ms">
+            <div><dt>Operator</dt><dd>Sobel · Prewitt · Roberts</dd></div>
+            <div><dt>Keluaran</dt><dd>Gx · Gy · |G|</dd></div>
+            <div><dt>Proses</dt><dd>Di browser, tanpa server</dd></div>
+          </dl>
+        </div>
+        <div class="demo rise" style="--d:200ms" aria-label="Contoh pembanding gambar asli dan hasil deteksi tepi Sobel">
+          <canvas id="heroOrig"></canvas>
+          <canvas id="heroEdge" class="edge"></canvas>
+          <div class="line"></div>
+          <span class="chip chip-l">Asli</span>
+          <span class="chip chip-r">Sobel</span>
+        </div>
+      </div>
+      <div class="teasers">
+        <a class="teaser" href="#studio"><h3>Studio <span>→</span></h3><p>Atur operator, ambang, dan noise uji. Geser garis pembanding untuk melihat sebelum dan sesudah.</p></a>
+        <a class="teaser" href="#bandingkan"><h3>Bandingkan <span>→</span></h3><p>Tiga operator pada gambar yang sama, lengkap dengan waktu proses dan persentase piksel tepi.</p></a>
+        <a class="teaser" href="#teori"><h3>Teori <span>→</span></h3><p>Kernel, rumus gradien, dan kalkulator patch 3×3 untuk menghitung langkahnya sendiri.</p></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- STUDIO -->
+  <section class="view" id="view-studio" data-view="studio" hidden>
+    <div class="wrap">
+      <header class="view-head">
+        <p class="eyebrow">Studio</p>
+        <h2>Ubah gambar menjadi <em>peta tepi</em></h2>
+        <p class="sub">Geser pembanding di atas gambar. Ubah operator, tampilan, dan ambang di panel; hasilnya dihitung ulang seketika.</p>
+      </header>
+      <div class="studio">
+          <div class="stage-wrap" id="dropZone">
+            <div class="stage" id="stage">
+              <canvas id="cvOrig"></canvas>
+              <canvas id="cvEdge"></canvas>
+              <div class="stage-line"></div>
+              <span class="chip chip-l">Asli</span>
+              <span class="chip chip-r" id="chipR">Sobel · Magnitudo</span>
+              <input type="range" id="cmp" min="0" max="100" value="50" aria-label="Posisi pembanding sebelum dan sesudah">
+              <div class="drop-msg">Lepaskan gambar di sini</div>
+            </div>
+          </div>
+          <div class="aux">
+            <dl class="stats">
+              <div><dt>Resolusi</dt><dd id="stRes">-</dd></div>
+              <div><dt>Waktu hitung</dt><dd id="stTime">-</dd></div>
+              <div><dt>Piksel tepi</dt><dd id="stEdge">-</dd></div>
+              <div><dt>Maks |G|</dt><dd id="stMax">-</dd></div>
+            </dl>
+          </div>
+        <aside class="panel" aria-label="Pengaturan">
+          <div class="group">
+            <span class="lbl">Gambar</span>
+            <input type="file" id="fileInput" accept="image/*" hidden>
+            <button class="btn btn-ghost btn-sm" id="btnPick" type="button">Pilih gambar dari perangkat</button>
+            <div class="seg" id="sampleSeg" role="group" aria-label="Gambar contoh">
+              <button type="button" data-sample="scene" aria-pressed="true">Cakrawala</button>
+              <button type="button" data-sample="geo" aria-pressed="false">Geometri</button>
+            </div>
+            <p class="src-name" id="srcName">Contoh: Cakrawala</p>
+          </div>
+          <div class="group">
+            <span class="lbl">Operator</span>
+            <div class="seg" data-key="method" role="group" aria-label="Operator">
+              <button type="button" data-val="sobel" aria-pressed="true">Sobel</button>
+              <button type="button" data-val="prewitt" aria-pressed="false">Prewitt</button>
+              <button type="button" data-val="roberts" aria-pressed="false">Roberts</button>
+            </div>
+            <div class="kpair">
+              <div class="kcell"><small>Gx</small><div class="kern" id="kGx"></div></div>
+              <div class="kcell"><small>Gy</small><div class="kern" id="kGy"></div></div>
+            </div>
+          </div>
+          <div class="group">
+            <span class="lbl">Tampilan</span>
+            <div class="seg" data-key="view" role="group" aria-label="Jenis keluaran">
+              <button type="button" data-val="mag" aria-pressed="true">|G|</button>
+              <button type="button" data-val="gx" aria-pressed="false">Gx</button>
+              <button type="button" data-val="gy" aria-pressed="false">Gy</button>
+              <button type="button" data-val="bin" aria-pressed="false">Biner</button>
+            </div>
+            <div class="seg" data-key="style" role="group" aria-label="Gaya warna">
+              <button type="button" data-val="gold" aria-pressed="true">Emas</button>
+              <button type="button" data-val="classic" aria-pressed="false">Klasik</button>
+              <button type="button" data-val="sketch" aria-pressed="false">Sketsa</button>
+            </div>
+          </div>
+          <div class="group">
+            <span class="lbl">Penyaringan</span>
+            <div class="row"><div class="row-h"><label for="thr">Ambang (threshold)</label><output id="thrOut">14</output></div><input type="range" id="thr" min="0" max="200" value="14"></div>
+            <div class="row"><div class="row-h"><label for="gain">Penguatan</label><output id="gainOut">1.15×</output></div><input type="range" id="gain" min="0.4" max="3" step="0.05" value="1.15"></div>
+            <label class="switch" for="blur"><span>Haluskan dulu (Gaussian 3×3)</span><input type="checkbox" id="blur"></label>
+            <div class="row"><div class="row-h"><label for="noise">Noise uji</label><output id="noiseOut">0</output></div><input type="range" id="noise" min="0" max="60" value="0"></div>
+          </div>
+          <div class="group">
+            <div class="actions">
+              <button class="btn btn-gold btn-sm" id="btnDownload" type="button">Unduh PNG</button>
+              <button class="btn btn-ghost btn-sm" id="btnView" type="button">Lihat penuh</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- BANDINGKAN -->
+  <section class="view" id="view-bandingkan" data-view="bandingkan" hidden>
+    <div class="wrap">
+      <header class="view-head">
+        <p class="eyebrow">Bandingkan</p>
+        <h2>Tiga operator, <em>satu gambar</em></h2>
+        <p class="sub">Memakai gambar dari Studio. Ubah ambang atau gaya di sini dan ketiganya ikut berubah.</p>
+      </header>
+      <div class="cmp-ctl">
+        <div class="row"><div class="row-h"><span>Keluaran</span></div>
+          <div class="seg" data-key="view" role="group" aria-label="Jenis keluaran">
+            <button type="button" data-val="mag" aria-pressed="true">|G|</button>
+            <button type="button" data-val="gx" aria-pressed="false">Gx</button>
+            <button type="button" data-val="gy" aria-pressed="false">Gy</button>
+            <button type="button" data-val="bin" aria-pressed="false">Biner</button>
+          </div></div>
+        <div class="row"><div class="row-h"><span>Gaya</span></div>
+          <div class="seg" data-key="style" role="group" aria-label="Gaya warna">
+            <button type="button" data-val="gold" aria-pressed="true">Emas</button>
+            <button type="button" data-val="classic" aria-pressed="false">Klasik</button>
+            <button type="button" data-val="sketch" aria-pressed="false">Sketsa</button>
+          </div></div>
+        <div class="row"><div class="row-h"><label for="thr2">Ambang</label><output id="thrOut2">14</output></div><input type="range" id="thr2" min="0" max="200" value="14"></div>
+        <div class="row"><div class="row-h"><label for="gain2">Penguatan</label><output id="gainOut2">1.15×</output></div><input type="range" id="gain2" min="0.4" max="3" step="0.05" value="1.15"></div>
+      </div>
+      <div class="cmp-grid" id="cmpGrid">
+        <article class="cmp-card" data-m="sobel">
+          <div class="cmp-frame"><canvas aria-label="Hasil Sobel"></canvas></div>
+          <div class="cmp-title"><h3>Sobel</h3><span class="tag" hidden>Tercepat</span></div>
+          <dl class="cmp-meta"><div><dt>Kernel</dt><dd>3×3</dd></div><div><dt>Waktu</dt><dd data-f="ms">-</dd></div><div><dt>Tepi</dt><dd data-f="pct">-</dd></div></dl>
+        </article>
+        <article class="cmp-card" data-m="prewitt">
+          <div class="cmp-frame"><canvas aria-label="Hasil Prewitt"></canvas></div>
+          <div class="cmp-title"><h3>Prewitt</h3><span class="tag" hidden>Tercepat</span></div>
+          <dl class="cmp-meta"><div><dt>Kernel</dt><dd>3×3</dd></div><div><dt>Waktu</dt><dd data-f="ms">-</dd></div><div><dt>Tepi</dt><dd data-f="pct">-</dd></div></dl>
+        </article>
+        <article class="cmp-card" data-m="roberts">
+          <div class="cmp-frame"><canvas aria-label="Hasil Roberts"></canvas></div>
+          <div class="cmp-title"><h3>Roberts</h3><span class="tag" hidden>Tercepat</span></div>
+          <dl class="cmp-meta"><div><dt>Kernel</dt><dd>2×2</dd></div><div><dt>Waktu</dt><dd data-f="ms">-</dd></div><div><dt>Tepi</dt><dd data-f="pct">-</dd></div></dl>
+        </article>
+      </div>
+      <p class="note">Tips: nyalakan Noise uji di Studio, lalu kembali ke sini. Roberts, yang tidak meratakan noise, biasanya paling ramai; Sobel dan Prewitt lebih tenang.</p>
+    </div>
+  </section>
+
+  <!-- TEORI -->
+  <section class="view" id="view-teori" data-view="teori" hidden>
+    <div class="wrap">
+      <header class="view-head">
+        <p class="eyebrow">Teori</p>
+        <h2>Bagaimana tepi <em>dihitung</em></h2>
+        <p class="sub">Tepi adalah tempat intensitas berubah cepat. Operator gradien mengukur perubahan itu dengan konvolusi kernel kecil pada setiap piksel.</p>
+      </header>
+
+      <div class="sec">
+        <h3>Alur kerja</h3>
+        <ol class="steps">
+          <li><strong>Grayscale</strong><p>Gambar warna diubah menjadi satu kanal intensitas.</p><div class="code">I = 0.299R + 0.587G + 0.114B</div></li>
+          <li><strong>Konvolusi</strong><p>Kernel Gx dan Gy digeser ke seluruh piksel, dikalikan elemen demi elemen, lalu dijumlahkan.</p></li>
+          <li><strong>Magnitudo</strong><p>Gx dan Gy digabung menjadi kekuatan tepi di tiap piksel.</p><div class="code">G = √(Gx² + Gy²)</div></li>
+          <li><strong>Threshold</strong><p>Piksel dengan G di bawah ambang dibuang agar tepi tipis dan bersih.</p></li>
+        </ol>
+      </div>
+
+      <div class="sec">
+        <h3>Tiga operator</h3>
+        <div class="methods">
+          <div class="method">
+            <h3>Sobel</h3>
+            <div class="kpair"><div class="kcell"><small>Gx</small><div class="kern" data-kernel="sobel:gx"></div></div><div class="kcell"><small>Gy</small><div class="kern" data-kernel="sobel:gy"></div></div></div>
+            <p>Memberi bobot 2 pada baris atau kolom tengah, sehingga sekaligus meratakan noise ringan saat menghitung selisih. Paling sering dipakai sebagai operator dasar.</p>
+          </div>
+          <div class="method">
+            <h3>Prewitt</h3>
+            <div class="kpair"><div class="kcell"><small>Gx</small><div class="kern" data-kernel="prewitt:gx"></div></div><div class="kcell"><small>Gy</small><div class="kern" data-kernel="prewitt:gy"></div></div></div>
+            <p>Bobot sama rata pada ketiga baris atau kolom. Hasilnya mirip Sobel, dengan perataan yang lebih sederhana.</p>
+          </div>
+          <div class="method">
+            <h3>Roberts</h3>
+            <div class="kpair"><div class="kcell"><small>Gx</small><div class="kern" data-kernel="roberts:gx"></div></div><div class="kcell"><small>Gy</small><div class="kern" data-kernel="roberts:gy"></div></div></div>
+            <p>Kernel 2×2 yang menghitung selisih diagonal dua piksel bertetangga. Cepat dan tajam, tetapi paling mudah terganggu noise karena tidak ada perataan.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Rumus</h3>
+        <div class="formulas">
+          <div><div class="code">G = √(Gx² + Gy²)</div><small>Magnitudo gradien, kekuatan tepi di satu piksel.</small></div>
+          <div><div class="code">G ≈ |Gx| + |Gy|</div><small>Pendekatan yang lebih murah tanpa akar kuadrat.</small></div>
+          <div><div class="code">θ = atan2(Gy, Gx)</div><small>Arah gradien, tegak lurus terhadap garis tepinya.</small></div>
+          <div><div class="code">E = 255 jika G ≥ T, selain itu 0</div><small>Threshold biner dengan ambang T.</small></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Kalkulator patch 3×3</h3>
+        <div class="calc">
+          <div class="calc-out">
+            <div class="seg" id="calcSeg" role="group" aria-label="Operator kalkulator">
+              <button type="button" data-m="sobel" aria-pressed="true">Sobel</button>
+              <button type="button" data-m="prewitt" aria-pressed="false">Prewitt</button>
+              <button type="button" data-m="roberts" aria-pressed="false">Roberts</button>
+            </div>
+            <div class="patch" id="patch" aria-label="Nilai intensitas patch 3×3"></div>
+          </div>
+          <div class="calc-out">
+            <dl class="res">
+              <div><dt>Gx</dt><dd id="rGx">0</dd></div>
+              <div><dt>Gy</dt><dd id="rGy">0</dd></div>
+              <div><dt>|G|</dt><dd id="rG">0</dd></div>
+              <div><dt>θ</dt><dd id="rT">0°</dd></div>
+            </dl>
+            <p class="expr" id="exprGx"></p>
+            <p class="expr" id="exprGy"></p>
+            <p class="note" style="margin:0">Ubah angka di patch (0 sampai 255). Contoh awal adalah tepi vertikal, jadi Gx besar dan Gy mendekati nol. Roberts hanya memakai empat piksel kiri atas, sisanya diredupkan.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Perbandingan</h3>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Operator</th><th>Kernel</th><th>Bobot</th><th>Ketahanan noise</th><th>Biaya hitung</th></tr></thead>
+            <tbody>
+              <tr><td>Sobel</td><td>3×3</td><td>Tengah bernilai 2</td><td>Baik, ada efek perataan</td><td>Sedang</td></tr>
+              <tr><td>Prewitt</td><td>3×3</td><td>Sama rata</td><td>Cukup baik</td><td>Sedang</td></tr>
+              <tr><td>Roberts</td><td>2×2</td><td>Selisih diagonal</td><td>Rendah, tanpa perataan</td><td>Paling ringan</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Catatan implementasi</h3>
+        <ul class="list">
+          <li>Piksel di pinggir gambar memakai replikasi piksel terdekat.</li>
+          <li>Gambar yang lebih besar dari 960 piksel pada sisi terpanjang diperkecil agar proses tetap cepat.</li>
+          <li>Nilai G dinormalkan ke persentil ke-99 sebelum diberi penguatan dan ambang, supaya satu piksel ekstrem tidak meredupkan seluruh hasil.</li>
+          <li>Pilihan Haluskan dulu menerapkan filter Gaussian 3×3 sebelum gradien dihitung untuk menekan noise.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap"><span>EdgeLab · Proyek Pengolahan Citra Digital (IF2313), Modul 10</span><span>Universitas Satya Terra Bhinneka</span></div>
+</footer>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Hasil gambar">
+  <div class="lb-box">
+    <img id="lbImg" alt="Hasil deteksi tepi">
+    <p>Tekan lama (HP) atau klik kanan (komputer) pada gambar untuk menyimpannya.</p>
+    <button class="btn btn-ghost btn-sm" id="lbClose" type="button">Tutup</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const MAXD = 960;
+
+  const KERNELS = {
+    sobel:   { gx: [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], gy: [[-1, -2, -1], [0, 0, 0], [1, 2, 1]] },
+    prewitt: { gx: [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]], gy: [[-1, -1, -1], [0, 0, 0], [1, 1, 1]] },
+    roberts: { gx: [[1, 0], [0, -1]], gy: [[0, 1], [-1, 0]] }
+  };
+  const NAMES = { sobel: 'Sobel', prewitt: 'Prewitt', roberts: 'Roberts' };
+  const VIEWS = { mag: 'Magnitudo', gx: 'Gx', gy: 'Gy', bin: 'Biner' };
+
+  const state = {
+    method: 'sobel', view: 'mag', style: 'gold', thr: 14, gain: 1.15, blur: false, noise: 0,
+    sample: 'scene', name: 'Contoh: Cakrawala',
+    w: 0, h: 0, base: null, color: null, gray: null, noiseField: null, route: ''
+  };
+  const cache = new Map();
+
+  /* ---------- Gambar contoh (digambar dengan canvas) ---------- */
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const poly = (x, col, pts) => { x.fillStyle = col; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); };
+
+  function sampleScene() {
+    const w = 800, h = 520, c = mk(w, h), x = c.getContext('2d');
+    let g = x.createLinearGradient(0, 0, 0, h * 0.7);
+    g.addColorStop(0, '#16213a'); g.addColorStop(0.55, '#6b5a7a'); g.addColorStop(1, '#e3a867');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    const sg = x.createRadialGradient(560, 235, 8, 560, 235, 130);
+    sg.addColorStop(0, '#fff6d8'); sg.addColorStop(0.4, '#ffd98a'); sg.addColorStop(1, 'rgba(255,200,120,0)');
+    x.fillStyle = sg; x.beginPath(); x.arc(560, 235, 130, 0, 7); x.fill();
+    x.fillStyle = '#fff3cf'; x.beginPath(); x.arc(560, 235, 46, 0, 7); x.fill();
+    poly(x, '#3a3550', [[0, 330], [120, 210], [230, 300], [350, 180], [500, 320], [640, 240], [800, 340], [800, 420], [0, 420]]);
+    poly(x, '#241f35', [[0, 385], [150, 292], [300, 372], [470, 272], [620, 385], [800, 305], [800, 440], [0, 440]]);
+    x.fillStyle = '#10131f'; x.fillRect(0, 410, w, 110);
+    x.strokeStyle = 'rgba(255,205,140,.55)'; x.lineWidth = 2;
+    for (let i = 0; i < 9; i++) { const y = 425 + i * 11, a = 40 + (i * 53) % 120; x.beginPath(); x.moveTo(380 + a, y); x.lineTo(740 - a, y); x.stroke(); }
+    const bl = [[30, 300, 70, 140], [108, 250, 56, 190], [172, 320, 80, 120], [262, 280, 50, 160]];
+    bl.forEach(([bx, by, bw, bh]) => {
+      x.fillStyle = '#0d0f19'; x.fillRect(bx, by + 40, bw, bh + 80 - 40 + (420 - (by + bh + 40)));
+      x.fillStyle = '#f3c56e';
+      for (let yy = by + 52; yy < by + bh + 20; yy += 22) for (let xx = bx + 9; xx < bx + bw - 12; xx += 17) x.fillRect(xx, yy, 8, 11);
+    });
+    x.strokeStyle = '#f5e7c1'; x.lineWidth = 4; x.beginPath(); x.arc(640, 120, 36, 0, 7); x.stroke();
+    x.lineWidth = 3; x.beginPath(); x.moveTo(420, 60); x.lineTo(500, 140); x.stroke();
+    x.save(); x.translate(330, 110); x.rotate(0.5); x.fillStyle = '#cfd6ee'; x.fillRect(-26, -26, 52, 52); x.restore();
+    return c;
+  }
+
+  function sampleGeo() {
+    const w = 800, h = 520, c = mk(w, h), x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#bfc3cb'); g.addColorStop(1, '#6f7686');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.fillStyle = '#14161d'; x.beginPath(); x.arc(170, 160, 100, 0, 7); x.fill();
+    x.strokeStyle = '#f2efe6'; x.lineWidth = 14; x.beginPath(); x.arc(170, 160, 58, 0, 7); x.stroke();
+    poly(x, '#e9d7a4', [[330, 260], [450, 60], [570, 260]]);
+    x.save(); x.translate(670, 150); x.rotate(0.6); x.fillStyle = '#202533'; x.fillRect(-70, -70, 140, 140); x.restore();
+    x.save(); x.beginPath(); x.rect(60, 310, 300, 160); x.clip(); x.fillStyle = '#d8d3c4'; x.fillRect(60, 310, 300, 160);
+    x.strokeStyle = '#1d202b'; x.lineWidth = 9;
+    for (let i = -200; i < 400; i += 26) { x.beginPath(); x.moveTo(60 + i, 470); x.lineTo(60 + i + 160, 310); x.stroke(); } x.restore();
+    const star = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? 42 : 100, a = -Math.PI / 2 + i * Math.PI / 5; star.push([520 + Math.cos(a) * r, 400 + Math.sin(a) * r]); }
+    poly(x, '#12141b', star);
+    const lg = x.createLinearGradient(620, 330, 760, 470); lg.addColorStop(0, '#fbfaf5'); lg.addColorStop(1, '#2a2f3f');
+    x.fillStyle = lg; x.fillRect(620, 330, 140, 140);
+    return c;
+  }
+
+  /* ---------- Sumber gambar ---------- */
+  function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+  function setSource(src, name) {
+    let w = src.width, h = src.height;
+    const k = Math.min(1, MAXD / Math.max(w, h));
+    w = Math.max(2, Math.round(w * k)); h = Math.max(2, Math.round(h * k));
+    const c = mk(w, h), cx = c.getContext('2d');
+    cx.drawImage(src, 0, 0, w, h);
+    state.base = cx.getImageData(0, 0, w, h);
+    state.w = w; state.h = h; state.name = name;
+    const r = rng(20261125), nf = new Float32Array(w * h);
+    for (let i = 0; i < nf.length; i++) { const u = Math.max(r(), 1e-9), v = r(); nf[i] = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+    state.noiseField = nf;
+    applyNoise();
+    $('#srcName').textContent = name;
+  }
+
+  function applyNoise() {
+    const { base, w, h, noiseField: nf, noise: amt } = state;
+    const d = new ImageData(new Uint8ClampedArray(base.data), w, h), px = d.data;
+    if (amt > 0) for (let i = 0, j = 0; i < nf.length; i++, j += 4) { const n = nf[i] * amt; px[j] += n; px[j + 1] += n; px[j + 2] += n; }
+    const gray = new Float32Array(w * h);
+    for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = 0.299 * px[j] + 0.587 * px[j + 1] + 0.114 * px[j + 2];
+    state.color = d; state.gray = gray; cache.clear();
+  }
+
+  /* ---------- Mesin deteksi tepi ---------- */
+  function blur3(g, w, h) {
+    const o = new Float32Array(g.length);
+    for (let y = 0; y < h; y++) {
+      const ym = y > 0 ? y - 1 : 0, yp = y < h - 1 ? y + 1 : y, r0 = ym * w, r1 = y * w, r2 = yp * w;
+      for (let x = 0; x < w; x++) {
+        const xm = x > 0 ? x - 1 : 0, xp = x < w - 1 ? x + 1 : x;
+        o[r1 + x] = (g[r0 + xm] + 2 * g[r0 + x] + g[r0 + xp] + 2 * g[r1 + xm] + 4 * g[r1 + x] + 2 * g[r1 + xp] + g[r2 + xm] + 2 * g[r2 + x] + g[r2 + xp]) / 16;
+      }
+    }
+    return o;
+  }
+
+  function percentile(arr, p) {
+    let mx = 0; for (let i = 0; i < arr.length; i++) if (arr[i] > mx) mx = arr[i];
+    if (mx === 0) return 1;
+    const bins = 1024, hist = new Uint32Array(bins);
+    for (let i = 0; i < arr.length; i++) hist[Math.min(bins - 1, (arr[i] / mx * bins) | 0)]++;
+    const target = arr.length * p; let acc = 0;
+    for (let b = 0; b < bins; b++) { acc += hist[b]; if (acc >= target) return Math.max(1e-6, (b + 1) / bins * mx); }
+    return mx;
+  }
+
+  function gradient(m, g, w, h) {
+    const n = w * h, ax = new Float32Array(n), ay = new Float32Array(n), mag = new Float32Array(n);
+    let max = 0;
+    if (m === 'roberts') {
+      for (let y = 0; y < h; y++) {
+        const y1 = y + 1 < h ? y + 1 : y;
+        for (let x = 0; x < w; x++) {
+          const x1 = x + 1 < w ? x + 1 : x, i = y * w + x;
+          const gx = g[y * w + x] - g[y1 * w + x1], gy = g[y * w + x1] - g[y1 * w + x];
+          ax[i] = Math.abs(gx); ay[i] = Math.abs(gy);
+          const v = Math.sqrt(gx * gx + gy * gy); mag[i] = v; if (v > max) max = v;
+        }
+      }
+    } else {
+      const kx = KERNELS[m].gx.flat(), ky = KERNELS[m].gy.flat();
+      for (let y = 0; y < h; y++) {
+        const ym = y > 0 ? y - 1 : 0, yp = y < h - 1 ? y + 1 : y, r0 = ym * w, r1 = y * w, r2 = yp * w;
+        for (let x = 0; x < w; x++) {
+          const xm = x > 0 ? x - 1 : 0, xp = x < w - 1 ? x + 1 : x;
+          const p0 = g[r0 + xm], p1 = g[r0 + x], p2 = g[r0 + xp], p3 = g[r1 + xm], p4 = g[r1 + x], p5 = g[r1 + xp], p6 = g[r2 + xm], p7 = g[r2 + x], p8 = g[r2 + xp];
+          const gx = kx[0] * p0 + kx[1] * p1 + kx[2] * p2 + kx[3] * p3 + kx[4] * p4 + kx[5] * p5 + kx[6] * p6 + kx[7] * p7 + kx[8] * p8;
+          const gy = ky[0] * p0 + ky[1] * p1 + ky[2] * p2 + ky[3] * p3 + ky[4] * p4 + ky[5] * p5 + ky[6] * p6 + ky[7] * p7 + ky[8] * p8;
+          const i = r1 + x; ax[i] = Math.abs(gx); ay[i] = Math.abs(gy);
+          const v = Math.sqrt(gx * gx + gy * gy); mag[i] = v; if (v > max) max = v;
+        }
+      }
+    }
+    return { mag, ax, ay, max, nm: percentile(mag, 0.99), nx: percentile(ax, 0.99), ny: percentile(ay, 0.99) };
+  }
+
+  function getRes(m) {
+    const key = m + '|' + (state.blur ? 1 : 0);
+    let r = cache.get(key);
+    if (r) return r;
+    let g = state.gray;
+    if (state.blur) { g = cache.get('blurred'); if (!g) { g = blur3(state.gray, state.w, state.h); cache.set('blurred', g); } }
+    const t0 = performance.now();
+    r = gradient(m, g, state.w, state.h);
+    r.ms = performance.now() - t0;
+    cache.set(key, r);
+    return r;
+  }
+
+  /* ---------- Pewarnaan ---------- */
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const LUT = {};
+  (function buildLuts() {
+    const ink = [12, 13, 17], gold = [201, 165, 92], hi = [246, 228, 178];
+    ['gold', 'classic', 'sketch'].forEach(s => {
+      const L = new Uint8ClampedArray(256 * 3);
+      for (let n = 0; n < 256; n++) {
+        let c;
+        if (s === 'gold') { const t = n / 255; c = t < 0.55 ? mix(ink, gold, t / 0.55) : mix(gold, hi, (t - 0.55) / 0.45); }
+        else if (s === 'classic') c = [n, n, n];
+        else c = [255 - n, 255 - n, 255 - n];
+        L[n * 3] = c[0]; L[n * 3 + 1] = c[1]; L[n * 3 + 2] = c[2];
+      }
+      LUT[s] = L;
+    });
+  })();
+
+  function paint(res, view) {
+    const { w, h } = state, out = new ImageData(w, h), o = out.data;
+    const arr = view === 'gx' ? res.ax : view === 'gy' ? res.ay : res.mag;
+    const norm = view === 'gx' ? res.nx : view === 'gy' ? res.ny : res.nm;
+    const k = state.gain * 255 / norm, thr = state.thr, cut = Math.max(1, thr), L = LUT[state.style];
+    let count = 0;
+    for (let i = 0, j = 0; i < arr.length; i++, j += 4) {
+      let v = arr[i] * k; if (v > 255) v = 255;
+      v = 255 * Math.pow(v / 255, 0.8);
+      if (v >= cut) count++;
+      if (view === 'bin') v = v >= cut ? 255 : 0; else if (v < thr) v = 0;
+      const n = (v | 0) * 3;
+      o[j] = L[n]; o[j + 1] = L[n + 1]; o[j + 2] = L[n + 2]; o[j + 3] = 255;
+    }
+    return { img: out, pct: count / arr.length * 100 };
+  }
+
+  const put = (cv, img) => { cv.width = img.width; cv.height = img.height; cv.getContext('2d').putImageData(img, 0, 0); };
+
+  /* ---------- Menggambar tiap scene ---------- */
+  function drawHero() {
+    const heroState = { view: 'mag' };
+    const res = getRes('sobel');
+    put($('#heroOrig'), state.color);
+    put($('#heroEdge'), paint(res, heroState.view).img);
+  }
+
+  function drawStudio() {
+    const res = getRes(state.method), p = paint(res, state.view);
+    put($('#cvOrig'), state.color); put($('#cvEdge'), p.img);
+    $('#stage').style.setProperty('--ratio', (state.w / state.h).toFixed(4));
+    $('#chipR').textContent = NAMES[state.method] + ' · ' + VIEWS[state.view];
+    $('#stRes').textContent = state.w + ' × ' + state.h;
+    $('#stTime').textContent = res.ms.toFixed(1) + ' ms';
+    $('#stEdge').textContent = p.pct.toFixed(1) + '%';
+    $('#stMax').textContent = Math.round(res.max);
+    renderKernel($('#kGx'), KERNELS[state.method].gx);
+    renderKernel($('#kGy'), KERNELS[state.method].gy);
+  }
+
+  function drawCompare() {
+    const cards = $$('#cmpGrid .cmp-card'); let best = Infinity, bestCard = null;
+    cards.forEach(card => {
+      const m = card.dataset.m, res = getRes(m), p = paint(res, state.view);
+      put($('canvas', card), p.img);
+      $('[data-f="ms"]', card).textContent = res.ms.toFixed(1) + ' ms';
+      $('[data-f="pct"]', card).textContent = p.pct.toFixed(1) + '%';
+      $('.tag', card).hidden = true;
+      if (res.ms < best) { best = res.ms; bestCard = card; }
+    });
+    if (bestCard) $('.tag', bestCard).hidden = false;
+  }
+
+  let raf = 0;
+  function schedule() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+  function draw() { if (state.route === 'studio') drawStudio(); else if (state.route === 'bandingkan') drawCompare(); }
+
+  function renderKernel(el, mat) {
+    el.style.setProperty('--n', mat.length);
+    el.innerHTML = mat.flat().map(v => `<span class="${v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero'}">${v > 0 ? '+' + v : v < 0 ? '−' + Math.abs(v) : '0'}</span>`).join('');
+  }
+
+  /* ---------- Kontrol ---------- */
+  function syncSeg(key) { $$(`.seg[data-key="${key}"] button`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.val === state[key]))); }
+  $$('.seg[data-key]').forEach(seg => {
+    seg.addEventListener('click', e => {
+      const b = e.target.closest('button[data-val]'); if (!b) return;
+      state[seg.dataset.key] = b.dataset.val; syncSeg(seg.dataset.key); schedule();
+    });
+  });
+
+  const fmtGain = v => (+v).toFixed(2).replace(/0$/, '') + '×';
+  function bindRange(ids, key, outIds, fmt) {
+    ids.forEach(id => $('#' + id).addEventListener('input', e => {
+      state[key] = +e.target.value;
+      ids.forEach(o => { $('#' + o).value = state[key]; });
+      outIds.forEach(o => { $('#' + o).textContent = fmt(state[key]); });
+      schedule();
+    }));
+  }
+  bindRange(['thr', 'thr2'], 'thr', ['thrOut', 'thrOut2'], v => String(v));
+  bindRange(['gain', 'gain2'], 'gain', ['gainOut', 'gainOut2'], fmtGain);
+  $('#blur').addEventListener('change', e => { state.blur = e.target.checked; schedule(); });
+
+  let noiseRaf = 0;
+  $('#noise').addEventListener('input', e => {
+    state.noise = +e.target.value; $('#noiseOut').textContent = String(state.noise);
+    if (!noiseRaf) noiseRaf = requestAnimationFrame(() => { noiseRaf = 0; applyNoise(); schedule(); });
+  });
+
+  $('#cmp').addEventListener('input', e => $('#stage').style.setProperty('--pos', e.target.value + '%'));
+
+  /* Muat gambar */
+  const toast = (() => { let t; return msg => { const el = $('#toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(t); t = setTimeout(() => el.classList.remove('on'), 4200); }; })();
+
+  function loadFile(file) {
+    if (!file || !/^image\//.test(file.type)) { toast('File itu bukan gambar. Pilih JPG, PNG, BMP, atau WebP.'); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      setSource(img, file.name); URL.revokeObjectURL(url);
+      $$('#sampleSeg button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      schedule();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('Gambar tidak bisa dibuka. Coba format lain.'); };
+    img.src = url;
+  }
+  $('#btnPick').addEventListener('click', () => $('#fileInput').click());
+  $('#fileInput').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+  $('#sampleSeg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-sample]'); if (!b) return;
+    state.sample = b.dataset.sample;
+    $$('#sampleSeg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    setSource(b.dataset.sample === 'geo' ? sampleGeo() : sampleScene(), 'Contoh: ' + (b.dataset.sample === 'geo' ? 'Geometri' : 'Cakrawala'));
+    schedule();
+  });
+  const dz = $('#dropZone');
+  ['dragenter', 'dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('dragging'); }));
+  ['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('dragging'); }));
+  dz.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+
+  /* Ekspor */
+  function exportCanvas() { const p = paint(getRes(state.method), state.view), c = mk(state.w, state.h); c.getContext('2d').putImageData(p.img, 0, 0); return c; }
+  $('#btnDownload').addEventListener('click', () => {
+    exportCanvas().toBlob(b => {
+      if (!b) { toast('Gagal membuat PNG.'); return; }
+      const u = URL.createObjectURL(b), a = document.createElement('a');
+      a.href = u; a.download = `edgelab-${state.method}-${state.view}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 4000);
+      toast('Unduhan dimulai. Jika tidak muncul, pakai Lihat penuh lalu simpan gambarnya.');
+    }, 'image/png');
+  });
+  $('#btnView').addEventListener('click', () => { $('#lbImg').src = exportCanvas().toDataURL('image/png'); $('#lb').classList.add('on'); $('#lbClose').focus(); });
+  const closeLb = () => $('#lb').classList.remove('on');
+  $('#lbClose').addEventListener('click', closeLb);
+  $('#lb').addEventListener('click', e => { if (e.target.id === 'lb') closeLb(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(); });
+
+  /* ---------- Kalkulator patch ---------- */
+  const calc = { m: 'sobel' };
+  const patchVals = [10, 10, 200, 10, 10, 200, 10, 10, 200];
+  $('#patch').innerHTML = patchVals.map((v, i) => `<input type="number" inputmode="numeric" min="0" max="255" id="c${i}" value="${v}" aria-label="Piksel baris ${Math.floor(i / 3) + 1} kolom ${i % 3 + 1}">`).join('');
+  function calcRun() {
+    const v = patchVals.map((_, i) => Number($('#c' + i).value) || 0);
+    const K = KERNELS[calc.m], kx = K.gx.flat(), ky = K.gy.flat();
+    const idx = calc.m === 'roberts' ? [0, 1, 3, 4] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    const sum = k => k.reduce((s, c, j) => s + c * v[idx[j]], 0);
+    const gx = sum(kx), gy = sum(ky), g = Math.hypot(gx, gy), t = Math.atan2(gy, gx) * 180 / Math.PI;
+    const expr = (name, k, total) => name + ' = ' + (k.map((c, j) => c !== 0 ? `(${c})(${v[idx[j]]})` : null).filter(Boolean).join(' + ') || '0') + ' = ' + total;
+    $('#rGx').textContent = gx; $('#rGy').textContent = gy; $('#rG').textContent = g.toFixed(1); $('#rT').textContent = t.toFixed(1) + '°';
+    $('#exprGx').textContent = expr('Gx', kx, gx); $('#exprGy').textContent = expr('Gy', ky, gy);
+    patchVals.forEach((_, i) => $('#c' + i).classList.toggle('off', !idx.includes(i)));
+  }
+  $('#patch').addEventListener('input', calcRun);
+  $('#calcSeg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-m]'); if (!b) return;
+    calc.m = b.dataset.m; $$('#calcSeg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); calcRun();
+  });
+
+  $$('[data-kernel]').forEach(el => { const [m, k] = el.dataset.kernel.split(':'); renderKernel(el, KERNELS[m][k]); });
+
+  /* ---------- Navigasi + transisi morph ---------- */
+  const ROUTES = ['beranda', 'studio', 'bandingkan', 'teori'];
+  const currentRoute = () => { const h = location.hash.slice(1); return ROUTES.includes(h) ? h : 'beranda'; };
+
+  function placeInk() {
+    const a = $('#nav a[aria-current]'), ink = $('#navInk'), nav = $('#nav');
+    if (!a) { ink.style.opacity = 0; return; }
+    ink.style.opacity = 1; ink.style.width = a.offsetWidth + 'px'; ink.style.transform = `translateX(${a.offsetLeft}px)`;
+    nav.scrollLeft = a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
+  }
+
+  function show(name) {
+    state.route = name;
+    $$('.view').forEach(v => { v.hidden = v.dataset.view !== name; });
+    $$('#nav a').forEach(a => { if (a.dataset.go === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    window.scrollTo(0, 0);
+    placeInk();
+    draw();
+  }
+  function go(name, animate) {
+    if (name === state.route) return;
+    if (animate && document.startViewTransition && !reduce) document.startViewTransition(() => show(name));
+    else show(name);
+  }
+  addEventListener('hashchange', () => go(currentRoute(), true));
+  addEventListener('resize', placeInk);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeInk);
+
+  /* Cahaya mengikuti kursor di Beranda */
+  const home = $('#view-beranda');
+  home.addEventListener('pointermove', e => {
+    const r = home.getBoundingClientRect();
+    home.style.setProperty('--mx', (e.clientX - r.left) + 'px'); home.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  });
+
+  /* ---------- Mulai ---------- */
+  setSource(sampleScene(), 'Contoh: Cakrawala');
+  drawHero();
+  calcRun();
+  document.body.classList.add('intro');
+  show(currentRoute());
+  setTimeout(() => document.body.classList.remove('intro'), 1800);
+})();
+</script>
+
+</body></html>
